@@ -1,11 +1,19 @@
 from lexer import lexer
 from parser import parser, variables
+from clear_code import preprocess_code
 
 
 code = '''
-a = 5<>3 ::
-not a ::
-1+3 ::
+a=0 ::
+while (a<3) do
+    a = a+1 ::
+    write(a) ::
+    if (a<>2) then
+        write("Camila")::
+    else
+        write("Orinson")::
+    endif
+endwhile
 '''
 # c = 4 ::
 # p = 3 ::
@@ -18,8 +26,10 @@ not a ::
 # blablabalba
 # endif ::
 
+final_code = preprocess_code(code)
 
-for line in code.split('\n'):
+
+for line in final_code.split('\n'):
     line = line.strip()
     if line:
         result = parser.parse(line)
