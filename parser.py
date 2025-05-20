@@ -5,32 +5,41 @@ variables = {}
 salidas = []
 
 
+precedence = (
+
+    ('left', '+', '-'),
+    ('left', '*', '/'),
+
+)
+
+
 def p_program(p):
     'program : statement_list'
 
 def p_statement_list(p):
-    '''statement_list : statement
-                      | statement_list statement'''
+    """statement_list : statement
+                      | statement_list statement"""
 
 def p_statement(p):
-    '''statement : assignment DPOINTS
+    """statement : assignment DPOINTS
                  | write DPOINTS
                  | capture DPOINTS
                  | expression DPOINTS
-                 | if_statement DPOINTS'''
+                 | if_statement DPOINTS
+                 | boolean_expr DPOINTS"""
+    print(run(p[1]))
 
 
 def p_assignment(p):
-    "assignment : ID ASSIGN expression"
+    """assignment : ID ASSIGN expression
+                  | ID ASSIGN boolean_expr"""
     if p[3] is None:
         error_message = f"Error: Asignación incompleta para '{p[1]}'"
         print(error_message)
         salidas.append(error_message)
         p[0] = None
     else:
-        variables[p[1]] = p[3]
-        p[0] = p[3]
-
+        p[0] = ('ASSIGN', p[1], p[3])
 
 
 def p_expression_var(p):
@@ -44,14 +53,10 @@ def p_expression_var(p):
         p[0] = 0  # Default value
 
 
-def p_expression_plus(p):
-    "expression : expression '+' term"
-    p[0] = p[1] + p[3]
-
-
-def p_expression_minus(p):
-    "expression : expression '-' term"
-    p[0] = p[1] - p[3]
+def p_expression(p):
+    """expression : expression '+' term
+                  | expression '-' term"""
+    p[0] = (p[2], p[1], p[3])
 
 
 def p_expression_term(p):
@@ -59,14 +64,10 @@ def p_expression_term(p):
     p[0] = p[1]
 
 
-def p_term_times(p):
-    "term : term '*' factor"
-    p[0] = p[1] * p[3]
-
-
-def p_term_div(p):
-    "term : term '/' factor"
-    p[0] = p[1] / p[3]
+def p_term(p):
+    """term : term '*' factor
+            | term '/' factor"""
+    p[0] = (p[2], p[1], p[3])
 
 
 def p_term_factor(p):
@@ -96,9 +97,9 @@ def p_factor_id(p):
         p[0] = 0
 
 def p_write(p):
-    '''write : WRITE '(' STRING ')'
+    """write : WRITE '(' STRING ')'
              | WRITE '(' expression ')'
-             | WRITE '(' STRING ',' expression ')' '''
+             | WRITE '(' STRING ',' expression ')' """
     
     if len(p) == 5:  # write("mensaje")
         salidas.append(str(p[3]))
@@ -108,8 +109,8 @@ def p_write(p):
         salidas.append(str(p[3]) + str(p[5]))
 #--------------------------
 def p_statement_list(p):
-    '''statement_list : statement
-                      | statement_list DPOINTS statement'''
+    """statement_list : statement
+                      | statement_list DPOINTS statement"""
     if len(p) == 2:
         p[0] = [p[1]]
     else:
@@ -133,8 +134,8 @@ def p_if_statement(p):
     p[0] = ('if', p[3], p[6], p[7])
 
 def p_opt_else(p):
-    '''opt_else : ELSE statement_list
-                | empty'''
+    """opt_else : ELSE statement_list
+                | empty"""
     if len(p) == 3:
         p[0] = p[2]
     else:
@@ -173,12 +174,12 @@ def p_boolean_expr_exp(p):
     p[0] = p[1]
 
 def p_relational_operator(p):
-    '''relational_operator : '<'
+    """relational_operator : '<'
                            | '>'
                            | LESSEQ
                            | GREATEREQ
                            | EQUALS
-                           | NOTEQ'''
+                           | NOTEQ"""
     p[0] = p[1]
 
 # //////////////////////////////////
@@ -214,3 +215,38 @@ def obtener_salidas():
 
 # Build the parser
 parser = yacc.yacc(start='program')
+
+
+def run(p):
+    if type(p) == tuple:
+        if p[0] == '+':
+            return run(p[1]) + run(p[2])
+        if p[0] == '-':
+            return run(p[1]) - run(p[2])
+        if p[0] == '*':
+            return run(p[1]) * run(p[2])
+        if p[0] == '/':
+            return run(p[1]) / run(p[2])
+        if p[0] == '<':
+            return run(p[1]) < run(p[2])
+        if p[0] == '>':
+            return run(p[1]) > run(p[2])
+        if p[0] == '<=':
+            return run(p[1]) <= run(p[2])
+        if p[0] == '>=':
+            return run(p[1]) >= run(p[2])
+        if p[0] == '==':
+            return run(p[1]) == run(p[2])
+        if p[0] == '<>':
+            return run(p[1]) != run(p[2])
+        if p[0] == 'or':
+            return run(p[1]) or run(p[2])
+        if p[0] == 'and':
+            return run(p[1]) and run(p[2])
+        if p[0] == 'not':
+            return not run(p[1])
+        if p[0] == 'ASSIGN':
+            variables[p[1]] = run(p[2])
+            return variables[p[1]]
+    else:
+        return p
